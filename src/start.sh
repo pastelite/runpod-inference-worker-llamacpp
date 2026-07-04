@@ -36,10 +36,30 @@ else
     echo "start.sh: WARNING: Caching is disabled. Please visit the inference-worker README and docs to learn more."
 fi
 
+# check if $PRELOADED_MODEL is set and points to a valid GGUF file
+# (baked into the image at build time via HF_MODEL_URL)
+if [ -z "$LLAMA_CACHED_MODEL" ] && [ -n "$PRELOADED_MODEL" ] && [ -f "$PRELOADED_MODEL" ]; then
+    echo "start.sh: Preloaded model found at $PRELOADED_MODEL"
+
+    # Only prepend -m if LLAMA_SERVER_CMD_ARGS doesn't already specify a model
+    if [[ "$LLAMA_SERVER_CMD_ARGS" != *"-m "* ]] && [[ "$LLAMA_SERVER_CMD_ARGS" != *"-hf "* ]]; then
+        # Use preloaded model with LLAMA_SERVER_ARGS as the default args
+        LLAMA_SERVER_CMD_ARGS="-m $PRELOADED_MODEL ${LLAMA_SERVER_ARGS}"
+        echo "start.sh: Using preloaded model. Effective args: $LLAMA_SERVER_CMD_ARGS"
+    else
+        echo "start.sh: LLAMA_SERVER_CMD_ARGS already specifies a model (-m or -hf), skipping preloaded model."
+    fi
+fi
+
 # check if $LLAMA_SERVER_CMD_ARGS is set
 if [ -z "$LLAMA_SERVER_CMD_ARGS" ]; then
-    echo "start.sh: Warning: LLAMA_SERVER_CMD_ARGS is not set. Defaulting to -hf unsloth/gemma-3-270m-it-GGUF:IQ2_XXS --ctx-size 512 -ngl 999"
-    LLAMA_SERVER_CMD_ARGS="-hf unsloth/gemma-3-270m-it-GGUF:IQ2_XXS --ctx-size 512 -ngl 999"
+    if [ -n "$LLAMA_SERVER_ARGS" ]; then
+        echo "start.sh: LLAMA_SERVER_CMD_ARGS is not set. Using LLAMA_SERVER_ARGS from build: $LLAMA_SERVER_ARGS"
+        LLAMA_SERVER_CMD_ARGS="$LLAMA_SERVER_ARGS"
+    else
+        echo "start.sh: Warning: LLAMA_SERVER_CMD_ARGS is not set. Defaulting to -hf unsloth/gemma-3-270m-it-GGUF:IQ2_XXS --ctx-size 512 -ngl 999"
+        LLAMA_SERVER_CMD_ARGS="-hf unsloth/gemma-3-270m-it-GGUF:IQ2_XXS --ctx-size 512 -ngl 999"
+    fi
 fi
 
 # check if the substring --port is in LLAMA_SERVER_CMD_ARGS and if yes, raise an error:

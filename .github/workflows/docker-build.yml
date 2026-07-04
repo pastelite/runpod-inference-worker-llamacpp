@@ -34,13 +34,13 @@ on:
         description: "Default llama-server arguments"
         required: false
         type: string
-        default: "--ctx-size 4096 -ngl 999 --flash-attn"
+        default: "--ctx-size 4096 -ngl 999 -fa"
 
 env:
   HF_MODEL_URL: "https://huggingface.co/mradermacher/gemma-4-26B-A4B-it-SOMPOA-heresy-GGUF/resolve/main/gemma-4-26B-A4B-it-SOMPOA-heresy.Q4_K_M.gguf"
   MODEL_FILENAME: "gemma-4-26b-sompoa.gguf"
   DOCKER_TAG: "gemma-4-26b-sompoa"
-  LLAMA_SERVER_ARGS: "--ctx-size 4096 -ngl 999 --flash-attn"
+  LLAMA_SERVER_ARGS: "--ctx-size 4096 -ngl 999 -fa"
 
 jobs:
   build-and-push:
