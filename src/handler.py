@@ -30,9 +30,9 @@ async def handler(job: Any):
     )
     engine = engine_class()
 
-    job = engine.generate(job_input)
+    generator = engine.generate(job_input)
 
-    async for batch in job:
+    async for batch in generator:
         yield batch
 
 
