@@ -281,11 +281,40 @@ class LlamaCPPOpenAIEngine(LlamaCPPEngine):
             if not openai_input.get("stream", False):
                 yield response.to_dict()
                 return
+            
+            # stream mode is somehow so much slower, I believe it is because
+            # it needs to send all of the response in a streaming way.
+            # let's split by sentences instead
+            buffer = ""
+            sentence_enders = (".", "!", "?")
 
             for chunk in response:
-                # Return json of the chunk without any line breaks
+                # Extract token text — differs between chat and completion endpoints
+                if chat:
+                    token_text = chunk["choices"][0]["delta"].get("content") or ""
+                else:
+                    token_text = chunk["choices"][0]["text"]
+
+                buffer += token_text
+
+                if buffer.strip() and buffer.strip()[-1] in sentence_enders:
+                    updated_chunk = chunk.copy()
+                    if chat:
+                        updated_chunk["choices"][0]["delta"]["content"] = buffer
+                    else:
+                        updated_chunk["choices"][0]["text"] = buffer
+                    yield "data: " + json.dumps(
+                        updated_chunk.to_dict(), separators=(",", ":")
+                    ) + "\n\n"
+                    buffer = ""
+
+            if buffer.strip():
+                if chat:
+                    final_chunk = {"choices": [{"delta": {"content": buffer}}]}
+                else:
+                    final_chunk = {"choices": [{"text": buffer}]}
                 yield "data: " + json.dumps(
-                    chunk.to_dict(), separators=(",", ":")
+                    final_chunk, separators=(",", ":")
                 ) + "\n\n"
 
             yield "data: [DONE]"
